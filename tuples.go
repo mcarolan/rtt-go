@@ -35,6 +35,27 @@ func vector(x, y, z float64) *tuple {
 	}
 }
 
+func color(r, g, b float64) *tuple {
+	return &tuple{
+		x: r,
+		y: g,
+		z: b,
+		w: 0,
+	}
+}
+
+func (t *tuple) red() float64 {
+	return t.x
+}
+
+func (t *tuple) green() float64 {
+	return t.y
+}
+
+func (t *tuple) blue() float64 {
+	return t.z
+}
+
 func (t *tuple) add(other *tuple) *tuple {
 	return &tuple{
 		x: t.x + other.x,
@@ -105,4 +126,11 @@ func (a *tuple) cross(b *tuple) *tuple {
 	return vector(a.y*b.z-a.z*b.y,
 		a.z*b.x-a.x*b.z,
 		a.x*b.y-a.y*b.x)
+}
+
+func (a *tuple) hadamard(b *tuple) *tuple {
+	red := a.red() * b.red()
+	green := a.green() * b.green()
+	blue := a.blue() * b.blue()
+	return color(red, green, blue)
 }
