@@ -144,3 +144,5 @@ func CompareTuple(a, b *Tuple) bool {
 
 var White = Color(1, 1, 1)
 var Red = Color(1, 0, 0)
+
+var ZeroPoint = Point(0, 0, 0)
