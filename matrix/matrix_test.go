@@ -67,6 +67,19 @@ func assertComponent(ctx context.Context, name string, x, y int, value float64) 
 	return ctx, nil
 }
 
+func assertComponentFrac(ctx context.Context, name string, x, y int, num, den float64) (context.Context, error) {
+	m := ctx.Value(variables{name}).(*Matrix)
+
+	c := m.At(x, y)
+	value := num / den
+
+	if !shared.CompareFloat(c, value) {
+		return ctx, fmt.Errorf("Expected %f found %f", value, c)
+	}
+
+	return ctx, nil
+}
+
 func matrixMultiplication(ctx context.Context, destination, aName, bName string) context.Context {
 	a := ctx.Value(variables{name: aName}).(*Matrix)
 	b := ctx.Value(variables{name: bName}).(*Matrix)
@@ -91,6 +104,17 @@ func matrixTupleMultiplication(ctx context.Context, destination, aName, bName st
 	t := a.MultiplyTuple(b)
 
 	return context.WithValue(ctx, variables{name: destination}, t)
+}
+
+func matrixInvert(ctx context.Context, destination, input string) (context.Context, error) {
+	a := ctx.Value(variables{name: input}).(*Matrix)
+	m, e := a.Invert()
+
+	if e != nil {
+		return ctx, e
+	}
+
+	return context.WithValue(ctx, variables{name: destination}, m), nil
 }
 
 func assignIdMatrix(ctx context.Context, destination string) context.Context {
@@ -203,6 +227,8 @@ func matrixConstructors(ctx *godog.ScenarioContext) {
 func matrixAssertions(ctx *godog.ScenarioContext) {
 	regex := fmt.Sprintf(`^%s\[%s,%s\] = %s$`, matrixVariableName, shared.PosInt, shared.PosInt, shared.Decimal)
 	ctx.Step(regex, assertComponent)
+	regex = fmt.Sprintf(`^%s\[%s,%s\] = %s/%s$`, matrixVariableName, shared.PosInt, shared.PosInt, shared.Decimal, shared.Decimal)
+	ctx.Step(regex, assertComponentFrac)
 	regex = fmt.Sprintf(`^%s (=|!=) %s$`, matrixVariableName, matrixVariableName)
 	ctx.Step(regex, assertMatrixEquals)
 	regex = fmt.Sprintf(`^%s (=|!=) %s$`, tupleVariableName, tupleVariableName)
@@ -227,6 +253,8 @@ func matrixAssignments(ctx *godog.ScenarioContext) {
 	regex = fmt.Sprintf(`^%s = %s \* %s$`, tupleVariableName, matrixVariableName, tupleVariableName)
 	ctx.Step(regex, matrixTupleMultiplication)
 	ctx.Step(fmt.Sprintf(`^%s = identity_matrix$`, matrixVariableName), assignIdMatrix)
+	regex = fmt.Sprintf(`^%s ← inverse\(%s\)$`, matrixVariableName, matrixVariableName)
+	ctx.Step(regex, matrixInvert)
 }
 
 func InitializeScenario(ctx *godog.ScenarioContext) {

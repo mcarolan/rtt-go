@@ -1,6 +1,8 @@
 package matrix
 
 import (
+	"errors"
+	"math"
 	"rtt/shared"
 	"rtt/tuple"
 )
@@ -9,6 +11,15 @@ type Matrix struct {
 	values []float64
 	width  int
 	height int
+}
+
+func FromValues(values []float64) *Matrix {
+	size := int(math.Sqrt(float64(len(values))))
+	return &Matrix{
+		values: values,
+		width:  size,
+		height: size,
+	}
 }
 
 func matrix(size int) *Matrix {
@@ -170,4 +181,23 @@ func (a Matrix) Cofactor(y, x int) float64 {
 
 func (a Matrix) IsInvertible() bool {
 	return a.Determinant() != 0
+}
+
+func (a Matrix) Invert() (*Matrix, error) {
+	if !a.IsInvertible() {
+		return nil, errors.New("input matrix not invertible")
+	}
+
+	result := matrix(a.width)
+
+	det := a.Determinant()
+
+	for y := 0; y < a.height; y++ {
+		for x := 0; x < a.width; x++ {
+			cofactor := a.Cofactor(y, x)
+			result.set(x, y, cofactor/det)
+		}
+	}
+
+	return result, nil
 }
