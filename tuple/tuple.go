@@ -141,3 +141,6 @@ func (a *Tuple) Hadamard(b *Tuple) *Tuple {
 func CompareTuple(a, b *Tuple) bool {
 	return shared.CompareFloat(a.X, b.X) && shared.CompareFloat(a.Y, b.Y) && shared.CompareFloat(a.Z, b.Z) && shared.CompareFloat(a.W, b.W)
 }
+
+var White = Color(1, 1, 1)
+var Red = Color(1, 0, 0)
