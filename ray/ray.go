@@ -12,8 +12,9 @@ type Ray struct {
 }
 
 type Sphere struct {
-	Id             int
-	Transformation matrix.Matrix
+	Id                int
+	transformation    matrix.Matrix
+	transformationInv matrix.Matrix
 }
 
 type Intersection struct {
@@ -26,19 +27,34 @@ var objectCounter = 0
 func NewSphere() *Sphere {
 	objectCounter += 1
 	return &Sphere{
-		Id:             objectCounter,
-		Transformation: *matrix.Identity,
+		Id:                objectCounter,
+		transformation:    *matrix.Identity,
+		transformationInv: *matrix.Identity,
 	}
 }
 
-func (s *Sphere) Intersect(ray *Ray) ([]Intersection, error) {
-	transformInverse, err := s.Transformation.Invert()
+func (s *Sphere) SetTransform(transform *matrix.Matrix) error {
+	inverse, err := transform.Invert()
 
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	ray2 := ray.Transform(transformInverse)
+	s.transformation = *transform
+	s.transformationInv = *inverse
+	return nil
+}
+
+func (s *Sphere) NormalAt(worldPoint tuple.Tuple) *tuple.Tuple {
+	objectPoint := s.transformationInv.MultiplyTuple(&worldPoint)
+	objectNormal := objectPoint.Subtract(tuple.ZeroPoint)
+	worldNormal := s.transformationInv.Transpose().MultiplyTuple(objectNormal)
+	worldNormal.W = 0
+	return worldNormal.Normalize()
+}
+
+func (s *Sphere) Intersect(ray *Ray) []Intersection {
+	ray2 := ray.Transform(&s.transformationInv)
 
 	sphereToRay := ray2.Origin.Subtract(tuple.ZeroPoint)
 
@@ -49,11 +65,11 @@ func (s *Sphere) Intersect(ray *Ray) ([]Intersection, error) {
 	discriminant := math.Pow(b, 2) - 4*a*c
 
 	if discriminant < 0 {
-		return []Intersection{}, nil
+		return []Intersection{}
 	} else {
 		t1 := (-b - math.Sqrt(discriminant)) / (2 * a)
 		t2 := (-b + math.Sqrt(discriminant)) / (2 * a)
-		return []Intersection{*s.Intersection(t1), *s.Intersection(t2)}, nil
+		return []Intersection{*s.Intersection(t1), *s.Intersection(t2)}
 	}
 }
 

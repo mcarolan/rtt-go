@@ -4,11 +4,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math"
 	"reflect"
+	"regexp"
 	"rtt/matrix"
 	"rtt/shared"
 	"rtt/transformations"
 	"rtt/tuple"
+	"strconv"
 	"testing"
 
 	"github.com/cucumber/godog"
@@ -17,6 +20,77 @@ import (
 type variables struct{ name string }
 
 var tupleVariableName = `([a-z]+[0-9]*)`
+
+var rootDivisionPattern = fmt.Sprintf(`√%s\/(\d+)`, shared.Decimal)
+var rootDivision = regexp.MustCompile(rootDivisionPattern)
+
+var complexDecimal = `([0-9\.√\-\/]+)`
+
+func parseComplexDecimal(s string) (float64, error) {
+	sign := 1.0
+	remaining := s
+	if s[0] == '-' {
+		sign = -1
+		remaining = remaining[1:]
+	}
+
+	match := rootDivision.FindStringSubmatch(remaining)
+	if match != nil {
+		root, err := strconv.ParseFloat(match[1], 64)
+		if err != nil {
+			return 0, err
+		}
+
+		divisor, err := strconv.ParseFloat(match[1], 64)
+		if err != nil {
+			return 0, err
+		}
+		return (math.Sqrt(root) / divisor) * sign, nil
+	}
+
+	f, err := strconv.ParseFloat(remaining, 64)
+	if err != nil {
+		return 0, err
+	}
+	return f * sign, nil
+}
+
+func parseComplexXYZ(xString, yString, zString string) (float64, float64, float64, error) {
+	x, err := parseComplexDecimal(xString)
+	if err != nil {
+		return 0, 0, 0, err
+	}
+	y, err := parseComplexDecimal(yString)
+	if err != nil {
+		return 0, 0, 0, err
+	}
+	z, err := parseComplexDecimal(zString)
+	if err != nil {
+		return 0, 0, 0, err
+	}
+	return x, y, z, nil
+}
+
+func aRotation(ctx context.Context, variable, over string, value float64) (context.Context, error) {
+	if over == "x" {
+		return context.WithValue(ctx, variables{name: variable}, transformations.RotationX(math.Pi/value)), nil
+	} else if over == "y" {
+		return context.WithValue(ctx, variables{name: variable}, transformations.RotationY(math.Pi/value)), nil
+	} else if over == "z" {
+		return context.WithValue(ctx, variables{name: variable}, transformations.RotationZ(math.Pi/value)), nil
+	} else {
+		return ctx, fmt.Errorf("Unknown component %s", over)
+	}
+}
+
+func aMatrixMul(ctx context.Context, variable, m1Var, m2Var string) (context.Context, error) {
+	m1 := ctx.Value(variables{name: m1Var}).(*matrix.Matrix)
+	m2 := ctx.Value(variables{name: m2Var}).(*matrix.Matrix)
+
+	result := m1.Multiply(m2)
+
+	return context.WithValue(ctx, variables{name: variable}, result), nil
+}
 
 func aPoint(ctx context.Context, variable string, x, y, z float64) (context.Context, error) {
 	p := tuple.Point(x, y, z)
@@ -55,11 +129,7 @@ func aIntersect(ctx context.Context, variable, sphereVariable, rayVariable strin
 	sphere := ctx.Value(variables{name: sphereVariable}).(*Sphere)
 	ray := ctx.Value(variables{name: rayVariable}).(*Ray)
 
-	result, err := sphere.Intersect(ray)
-
-	if err != nil {
-		return ctx, err
-	}
+	result := sphere.Intersect(ray)
 
 	return context.WithValue(ctx, variables{name: variable}, result), nil
 }
@@ -108,10 +178,27 @@ func aHit(ctx context.Context, variable, intersectionsVariable string) (context.
 	return context.WithValue(ctx, variables{name: variable}, result), nil
 }
 
+func aNormalAt(ctx context.Context, variable, sphereVariable, xStr, yStr, zStr string) (context.Context, error) {
+	sphere := ctx.Value(variables{name: sphereVariable}).(*Sphere)
+	x, y, z, err := parseComplexXYZ(xStr, yStr, zStr)
+
+	if err != nil {
+		return ctx, err
+	}
+
+	result := sphere.NormalAt(*tuple.Point(x, y, z))
+	return context.WithValue(ctx, variables{name: variable}, result), nil
+}
+
 func setTransform(ctx context.Context, sphereVariable, matrixVariable string) (context.Context, error) {
 	sphere := ctx.Value(variables{name: sphereVariable}).(*Sphere)
 	matrix := ctx.Value(variables{name: matrixVariable}).(*matrix.Matrix)
-	sphere.Transformation = *matrix
+	err := sphere.SetTransform(matrix)
+
+	if err != nil {
+		return ctx, err
+	}
+
 	return ctx, nil
 }
 
@@ -168,8 +255,36 @@ func assertSphereTransform(ctx context.Context, sphereVariable, matrixVariable s
 		m = ctx.Value(variables{name: matrixVariable}).(*matrix.Matrix)
 	}
 
-	if !sphere.Transformation.Equals(m) {
-		return ctx, fmt.Errorf("Error %+v != %+v!", sphere.Transformation, m)
+	if !sphere.transformation.Equals(m) {
+		return ctx, fmt.Errorf("Error %+v != %+v!", sphere.transformation, m)
+	}
+
+	return ctx, nil
+}
+
+func assertEqualsVector(ctx context.Context, tupleVariable, xStr, yStr, zStr string) (context.Context, error) {
+	actual := ctx.Value(variables{name: tupleVariable}).(*tuple.Tuple)
+	x, y, z, err := parseComplexXYZ(xStr, yStr, zStr)
+
+	if err != nil {
+		return ctx, err
+	}
+
+	expected := tuple.Vector(x, y, z)
+
+	if !tuple.CompareTuple(expected, actual) {
+		return ctx, fmt.Errorf("Error %+v != %+v!", expected, actual)
+	}
+
+	return ctx, nil
+}
+
+func assertEqualsNormalize(ctx context.Context, tupleVariable1, tupleVariable2 string) (context.Context, error) {
+	tuple1 := ctx.Value(variables{name: tupleVariable1}).(*tuple.Tuple)
+	tuple2 := ctx.Value(variables{name: tupleVariable2}).(*tuple.Tuple)
+
+	if !tuple.CompareTuple(tuple1, tuple2.Normalize()) {
+		return ctx, fmt.Errorf("Error %+v != normalize(%+v)!", tuple1, tuple2)
 	}
 
 	return ctx, nil
@@ -295,6 +410,15 @@ func constructors(ctx *godog.ScenarioContext) {
 
 	regex = fmt.Sprintf(`^(.+) ← hit\(%s\)$`, tupleVariableName)
 	ctx.Step(regex, aHit)
+
+	regex = fmt.Sprintf(`^(.+) ← normal_at\(%s, point\(%s, %s, %s\)\)$`, tupleVariableName, complexDecimal, complexDecimal, complexDecimal)
+	ctx.Step(regex, aNormalAt)
+
+	regex = `^(.+) ← rotation_(.)\(π\/(\d+)\)$`
+	ctx.Step(regex, aRotation)
+
+	regex = fmt.Sprintf(`^(.+) ← %s \* %s$`, tupleVariableName, tupleVariableName)
+	ctx.Step(regex, aMatrixMul)
 }
 
 func assertions(ctx *godog.ScenarioContext) {
@@ -320,6 +444,10 @@ func assertions(ctx *godog.ScenarioContext) {
 	ctx.Step(regex, assertIntersectionNothing)
 	regex = fmt.Sprintf(`^%s.transform = %s$`, tupleVariableName, tupleVariableName)
 	ctx.Step(regex, assertSphereTransform)
+	regex = fmt.Sprintf(`^%s = vector\(%s, %s, %s\)$`, tupleVariableName, complexDecimal, complexDecimal, complexDecimal)
+	ctx.Step(regex, assertEqualsVector)
+	regex = fmt.Sprintf(`^%s = normalize\(%s\)$`, tupleVariableName, tupleVariableName)
+	ctx.Step(regex, assertEqualsNormalize)
 }
 
 func setters(ctx *godog.ScenarioContext) {
