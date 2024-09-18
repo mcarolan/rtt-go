@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"rtt/shared"
+	"rtt/sharedtest"
 	"rtt/tuple"
 	"strconv"
 	"testing"
@@ -218,16 +219,16 @@ func assignSubmatrix(ctx context.Context, destination, input string, row, col in
 
 func matrixConstructors(ctx *godog.ScenarioContext) {
 	ctx.Step(`^the following (\d+)x(?:\d+) matrix (.+):$`, aMatrix)
-	regex := fmt.Sprintf(`^(.+) ← tuple\(%s, %s, %s, %s\)$`, shared.Decimal, shared.Decimal, shared.Decimal, shared.Decimal)
+	regex := fmt.Sprintf(`^(.+) ← tuple\(%s, %s, %s, %s\)$`, sharedtest.Decimal, sharedtest.Decimal, sharedtest.Decimal, sharedtest.Decimal)
 	ctx.Step(regex, aTuple)
-	regex = fmt.Sprintf(`^%s ← submatrix\(%s, %s, %s\)$`, matrixVariableName, matrixVariableName, shared.PosInt, shared.PosInt)
+	regex = fmt.Sprintf(`^%s ← submatrix\(%s, %s, %s\)$`, matrixVariableName, matrixVariableName, sharedtest.PosInt, sharedtest.PosInt)
 	ctx.Step(regex, assignSubmatrix)
 }
 
 func matrixAssertions(ctx *godog.ScenarioContext) {
-	regex := fmt.Sprintf(`^%s\[%s,%s\] = %s$`, matrixVariableName, shared.PosInt, shared.PosInt, shared.Decimal)
+	regex := fmt.Sprintf(`^%s\[%s,%s\] = %s$`, matrixVariableName, sharedtest.PosInt, sharedtest.PosInt, sharedtest.Decimal)
 	ctx.Step(regex, assertComponent)
-	regex = fmt.Sprintf(`^%s\[%s,%s\] = %s/%s$`, matrixVariableName, shared.PosInt, shared.PosInt, shared.Decimal, shared.Decimal)
+	regex = fmt.Sprintf(`^%s\[%s,%s\] = %s/%s$`, matrixVariableName, sharedtest.PosInt, sharedtest.PosInt, sharedtest.Decimal, sharedtest.Decimal)
 	ctx.Step(regex, assertComponentFrac)
 	regex = fmt.Sprintf(`^%s (=|!=) %s$`, matrixVariableName, matrixVariableName)
 	ctx.Step(regex, assertMatrixEquals)
@@ -235,13 +236,13 @@ func matrixAssertions(ctx *godog.ScenarioContext) {
 	ctx.Step(regex, assertTupleEquals)
 	regex = fmt.Sprintf(`^%s = transpose\(%s\)$`, matrixVariableName, matrixVariableName)
 	ctx.Step(regex, matrixTranspose)
-	regex = fmt.Sprintf(`^determinant\(%s\) = %s$`, matrixVariableName, shared.Decimal)
+	regex = fmt.Sprintf(`^determinant\(%s\) = %s$`, matrixVariableName, sharedtest.Decimal)
 	ctx.Step(regex, assertDeterminant)
-	regex = fmt.Sprintf(`submatrix\(%s, %s, %s\) = %s`, matrixVariableName, shared.PosInt, shared.PosInt, matrixVariableName)
+	regex = fmt.Sprintf(`submatrix\(%s, %s, %s\) = %s`, matrixVariableName, sharedtest.PosInt, sharedtest.PosInt, matrixVariableName)
 	ctx.Step(regex, assertSubmatrix)
-	regex = fmt.Sprintf(`^minor\(%s, %s, %s\) = %s$`, matrixVariableName, shared.PosInt, shared.PosInt, shared.Decimal)
+	regex = fmt.Sprintf(`^minor\(%s, %s, %s\) = %s$`, matrixVariableName, sharedtest.PosInt, sharedtest.PosInt, sharedtest.Decimal)
 	ctx.Step(regex, assertMinor)
-	regex = fmt.Sprintf(`^cofactor\(%s, %s, %s\) = %s$`, matrixVariableName, shared.PosInt, shared.PosInt, shared.Decimal)
+	regex = fmt.Sprintf(`^cofactor\(%s, %s, %s\) = %s$`, matrixVariableName, sharedtest.PosInt, sharedtest.PosInt, sharedtest.Decimal)
 	ctx.Step(regex, assertCofactor)
 	regex = fmt.Sprintf(`^%s is (not )?invertible$`, matrixVariableName)
 	ctx.Step(regex, assertInvertible)

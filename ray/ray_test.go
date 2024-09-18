@@ -6,109 +6,47 @@ import (
 	"fmt"
 	"math"
 	"reflect"
-	"regexp"
 	"rtt/matrix"
 	"rtt/shared"
+	"rtt/sharedtest"
 	"rtt/transformations"
 	"rtt/tuple"
-	"strconv"
+	"rtt/tupletest"
 	"testing"
 
 	"github.com/cucumber/godog"
 )
 
-type variables struct{ name string }
-
 var tupleVariableName = `([a-z]+[0-9]*)`
-
-var rootDivisionPattern = fmt.Sprintf(`√%s\/(\d+)`, shared.Decimal)
-var rootDivision = regexp.MustCompile(rootDivisionPattern)
-
-var complexDecimal = `([0-9\.√\-\/]+)`
-
-func parseComplexDecimal(s string) (float64, error) {
-	sign := 1.0
-	remaining := s
-	if s[0] == '-' {
-		sign = -1
-		remaining = remaining[1:]
-	}
-
-	match := rootDivision.FindStringSubmatch(remaining)
-	if match != nil {
-		root, err := strconv.ParseFloat(match[1], 64)
-		if err != nil {
-			return 0, err
-		}
-
-		divisor, err := strconv.ParseFloat(match[1], 64)
-		if err != nil {
-			return 0, err
-		}
-		return (math.Sqrt(root) / divisor) * sign, nil
-	}
-
-	f, err := strconv.ParseFloat(remaining, 64)
-	if err != nil {
-		return 0, err
-	}
-	return f * sign, nil
-}
-
-func parseComplexXYZ(xString, yString, zString string) (float64, float64, float64, error) {
-	x, err := parseComplexDecimal(xString)
-	if err != nil {
-		return 0, 0, 0, err
-	}
-	y, err := parseComplexDecimal(yString)
-	if err != nil {
-		return 0, 0, 0, err
-	}
-	z, err := parseComplexDecimal(zString)
-	if err != nil {
-		return 0, 0, 0, err
-	}
-	return x, y, z, nil
-}
 
 func aRotation(ctx context.Context, variable, over string, value float64) (context.Context, error) {
 	if over == "x" {
-		return context.WithValue(ctx, variables{name: variable}, transformations.RotationX(math.Pi/value)), nil
+		return context.WithValue(ctx, sharedtest.Variables{Name: variable}, transformations.RotationX(math.Pi/value)), nil
 	} else if over == "y" {
-		return context.WithValue(ctx, variables{name: variable}, transformations.RotationY(math.Pi/value)), nil
+		return context.WithValue(ctx, sharedtest.Variables{Name: variable}, transformations.RotationY(math.Pi/value)), nil
 	} else if over == "z" {
-		return context.WithValue(ctx, variables{name: variable}, transformations.RotationZ(math.Pi/value)), nil
+		return context.WithValue(ctx, sharedtest.Variables{Name: variable}, transformations.RotationZ(math.Pi/value)), nil
 	} else {
 		return ctx, fmt.Errorf("Unknown component %s", over)
 	}
 }
 
 func aMatrixMul(ctx context.Context, variable, m1Var, m2Var string) (context.Context, error) {
-	m1 := ctx.Value(variables{name: m1Var}).(*matrix.Matrix)
-	m2 := ctx.Value(variables{name: m2Var}).(*matrix.Matrix)
+	m1 := ctx.Value(sharedtest.Variables{Name: m1Var}).(*matrix.Matrix)
+	m2 := ctx.Value(sharedtest.Variables{Name: m2Var}).(*matrix.Matrix)
 
 	result := m1.Multiply(m2)
 
-	return context.WithValue(ctx, variables{name: variable}, result), nil
-}
-
-func aPoint(ctx context.Context, variable string, x, y, z float64) (context.Context, error) {
-	p := tuple.Point(x, y, z)
-	return context.WithValue(ctx, variables{name: variable}, p), nil
-}
-
-func aVector(ctx context.Context, variable string, x, y, z float64) (context.Context, error) {
-	p := tuple.Vector(x, y, z)
-	return context.WithValue(ctx, variables{name: variable}, p), nil
+	return context.WithValue(ctx, sharedtest.Variables{Name: variable}, result), nil
 }
 
 func aRayFromVariables(ctx context.Context, variable, originVariable, directionVariable string) (context.Context, error) {
-	origin := ctx.Value(variables{name: originVariable}).(*tuple.Tuple)
-	direction := ctx.Value(variables{name: directionVariable}).(*tuple.Tuple)
+	origin := ctx.Value(sharedtest.Variables{Name: originVariable}).(*tuple.Tuple)
+	direction := ctx.Value(sharedtest.Variables{Name: directionVariable}).(*tuple.Tuple)
 
 	ray := NewRay(*origin, *direction)
 
-	return context.WithValue(ctx, variables{name: variable}, ray), nil
+	return context.WithValue(ctx, sharedtest.Variables{Name: variable}, ray), nil
 }
 
 func aRayFromValues(ctx context.Context, variable string, originX, originY, originZ, directionX, directionY, directionZ float64) (context.Context, error) {
@@ -117,82 +55,82 @@ func aRayFromValues(ctx context.Context, variable string, originX, originY, orig
 
 	ray := NewRay(*origin, *direction)
 
-	return context.WithValue(ctx, variables{name: variable}, ray), nil
+	return context.WithValue(ctx, sharedtest.Variables{Name: variable}, ray), nil
 }
 
 func aSphere(ctx context.Context, variable string) (context.Context, error) {
 	sphere := NewSphere()
-	return context.WithValue(ctx, variables{name: variable}, sphere), nil
+	return context.WithValue(ctx, sharedtest.Variables{Name: variable}, sphere), nil
 }
 
 func aIntersect(ctx context.Context, variable, sphereVariable, rayVariable string) (context.Context, error) {
-	sphere := ctx.Value(variables{name: sphereVariable}).(*Sphere)
-	ray := ctx.Value(variables{name: rayVariable}).(*Ray)
+	sphere := ctx.Value(sharedtest.Variables{Name: sphereVariable}).(*Sphere)
+	ray := ctx.Value(sharedtest.Variables{Name: rayVariable}).(*Ray)
 
 	result := sphere.Intersect(ray)
 
-	return context.WithValue(ctx, variables{name: variable}, result), nil
+	return context.WithValue(ctx, sharedtest.Variables{Name: variable}, result), nil
 }
 
 func aIntersection(ctx context.Context, variable string, t float64, sphereVariable string) (context.Context, error) {
-	sphere := ctx.Value(variables{name: sphereVariable}).(*Sphere)
+	sphere := ctx.Value(sharedtest.Variables{Name: sphereVariable}).(*Sphere)
 
 	result := sphere.Intersection(t)
 
-	return context.WithValue(ctx, variables{name: variable}, result), nil
+	return context.WithValue(ctx, sharedtest.Variables{Name: variable}, result), nil
 }
 
 func aTranslationMatrix(ctx context.Context, variable string, x, y, z float64) (context.Context, error) {
 	matrix := transformations.Translation(x, y, z)
-	return context.WithValue(ctx, variables{name: variable}, matrix), nil
+	return context.WithValue(ctx, sharedtest.Variables{Name: variable}, matrix), nil
 }
 
 func aScalingMatrix(ctx context.Context, variable string, x, y, z float64) (context.Context, error) {
 	matrix := transformations.Scaling(x, y, z)
-	return context.WithValue(ctx, variables{name: variable}, matrix), nil
+	return context.WithValue(ctx, sharedtest.Variables{Name: variable}, matrix), nil
 }
 
 func aTransform(ctx context.Context, variable, rayVariable, matrixVariable string) (context.Context, error) {
-	matrix := ctx.Value(variables{name: matrixVariable}).(*matrix.Matrix)
-	ray := ctx.Value(variables{name: rayVariable}).(*Ray)
-	return context.WithValue(ctx, variables{name: variable}, ray.Transform(matrix)), nil
+	matrix := ctx.Value(sharedtest.Variables{Name: matrixVariable}).(*matrix.Matrix)
+	ray := ctx.Value(sharedtest.Variables{Name: rayVariable}).(*Ray)
+	return context.WithValue(ctx, sharedtest.Variables{Name: variable}, ray.Transform(matrix)), nil
 }
 
 func aIntersections2(ctx context.Context, variable, i1Variable, i2Variable string) (context.Context, error) {
-	i1 := ctx.Value(variables{name: i1Variable}).(*Intersection)
-	i2 := ctx.Value(variables{name: i2Variable}).(*Intersection)
-	return context.WithValue(ctx, variables{name: variable}, []Intersection{*i1, *i2}), nil
+	i1 := ctx.Value(sharedtest.Variables{Name: i1Variable}).(*Intersection)
+	i2 := ctx.Value(sharedtest.Variables{Name: i2Variable}).(*Intersection)
+	return context.WithValue(ctx, sharedtest.Variables{Name: variable}, []Intersection{*i1, *i2}), nil
 }
 
 func aIntersections4(ctx context.Context, variable, i1Variable, i2Variable, i3Variable, i4Variable string) (context.Context, error) {
-	i1 := ctx.Value(variables{name: i1Variable}).(*Intersection)
-	i2 := ctx.Value(variables{name: i2Variable}).(*Intersection)
-	i3 := ctx.Value(variables{name: i3Variable}).(*Intersection)
-	i4 := ctx.Value(variables{name: i4Variable}).(*Intersection)
-	return context.WithValue(ctx, variables{name: variable}, []Intersection{*i1, *i2, *i3, *i4}), nil
+	i1 := ctx.Value(sharedtest.Variables{Name: i1Variable}).(*Intersection)
+	i2 := ctx.Value(sharedtest.Variables{Name: i2Variable}).(*Intersection)
+	i3 := ctx.Value(sharedtest.Variables{Name: i3Variable}).(*Intersection)
+	i4 := ctx.Value(sharedtest.Variables{Name: i4Variable}).(*Intersection)
+	return context.WithValue(ctx, sharedtest.Variables{Name: variable}, []Intersection{*i1, *i2, *i3, *i4}), nil
 }
 
 func aHit(ctx context.Context, variable, intersectionsVariable string) (context.Context, error) {
-	intersections := ctx.Value(variables{name: intersectionsVariable}).([]Intersection)
+	intersections := ctx.Value(sharedtest.Variables{Name: intersectionsVariable}).([]Intersection)
 	result := Hit(intersections)
-	return context.WithValue(ctx, variables{name: variable}, result), nil
+	return context.WithValue(ctx, sharedtest.Variables{Name: variable}, result), nil
 }
 
 func aNormalAt(ctx context.Context, variable, sphereVariable, xStr, yStr, zStr string) (context.Context, error) {
-	sphere := ctx.Value(variables{name: sphereVariable}).(*Sphere)
-	x, y, z, err := parseComplexXYZ(xStr, yStr, zStr)
+	sphere := ctx.Value(sharedtest.Variables{Name: sphereVariable}).(*Sphere)
+	x, y, z, err := sharedtest.ParseXYZ(xStr, yStr, zStr)
 
 	if err != nil {
 		return ctx, err
 	}
 
 	result := sphere.NormalAt(*tuple.Point(x, y, z))
-	return context.WithValue(ctx, variables{name: variable}, result), nil
+	return context.WithValue(ctx, sharedtest.Variables{Name: variable}, result), nil
 }
 
 func setTransform(ctx context.Context, sphereVariable, matrixVariable string) (context.Context, error) {
-	sphere := ctx.Value(variables{name: sphereVariable}).(*Sphere)
-	matrix := ctx.Value(variables{name: matrixVariable}).(*matrix.Matrix)
+	sphere := ctx.Value(sharedtest.Variables{Name: sphereVariable}).(*Sphere)
+	matrix := ctx.Value(sharedtest.Variables{Name: matrixVariable}).(*matrix.Matrix)
 	err := sphere.SetTransform(matrix)
 
 	if err != nil {
@@ -203,8 +141,8 @@ func setTransform(ctx context.Context, sphereVariable, matrixVariable string) (c
 }
 
 func assertRayComponent(ctx context.Context, rayVariable, component, tupleVariable string) (context.Context, error) {
-	ray := ctx.Value(variables{name: rayVariable}).(*Ray)
-	t := ctx.Value(variables{name: tupleVariable}).(*tuple.Tuple)
+	ray := ctx.Value(sharedtest.Variables{Name: rayVariable}).(*Ray)
+	t := ctx.Value(sharedtest.Variables{Name: tupleVariable}).(*tuple.Tuple)
 
 	var expected tuple.Tuple
 
@@ -224,7 +162,7 @@ func assertRayComponent(ctx context.Context, rayVariable, component, tupleVariab
 }
 
 func assertIntersectionsT(ctx context.Context, intersectionVariable string, index int, t float64) (context.Context, error) {
-	intersections := ctx.Value(variables{name: intersectionVariable}).([]Intersection)
+	intersections := ctx.Value(sharedtest.Variables{Name: intersectionVariable}).([]Intersection)
 	intersection := intersections[index]
 
 	if !shared.CompareFloat(intersection.T, t) {
@@ -235,10 +173,10 @@ func assertIntersectionsT(ctx context.Context, intersectionVariable string, inde
 }
 
 func assertIntersectionsObject(ctx context.Context, intersectionVariable string, index int, objectVariable string) (context.Context, error) {
-	intersections := ctx.Value(variables{name: intersectionVariable}).([]Intersection)
+	intersections := ctx.Value(sharedtest.Variables{Name: intersectionVariable}).([]Intersection)
 	intersection := intersections[index]
 
-	object := ctx.Value(variables{name: objectVariable}).(*Sphere)
+	object := ctx.Value(sharedtest.Variables{Name: objectVariable}).(*Sphere)
 
 	if intersection.Object != object.Id {
 		return ctx, fmt.Errorf("Error %d != %d!", intersection.Object, object.Id)
@@ -248,11 +186,11 @@ func assertIntersectionsObject(ctx context.Context, intersectionVariable string,
 }
 
 func assertSphereTransform(ctx context.Context, sphereVariable, matrixVariable string) (context.Context, error) {
-	sphere := ctx.Value(variables{name: sphereVariable}).(*Sphere)
+	sphere := ctx.Value(sharedtest.Variables{Name: sphereVariable}).(*Sphere)
 	m := matrix.Identity
 
 	if matrixVariable != "id" {
-		m = ctx.Value(variables{name: matrixVariable}).(*matrix.Matrix)
+		m = ctx.Value(sharedtest.Variables{Name: matrixVariable}).(*matrix.Matrix)
 	}
 
 	if !sphere.transformation.Equals(m) {
@@ -263,8 +201,8 @@ func assertSphereTransform(ctx context.Context, sphereVariable, matrixVariable s
 }
 
 func assertEqualsVector(ctx context.Context, tupleVariable, xStr, yStr, zStr string) (context.Context, error) {
-	actual := ctx.Value(variables{name: tupleVariable}).(*tuple.Tuple)
-	x, y, z, err := parseComplexXYZ(xStr, yStr, zStr)
+	actual := ctx.Value(sharedtest.Variables{Name: tupleVariable}).(*tuple.Tuple)
+	x, y, z, err := sharedtest.ParseXYZ(xStr, yStr, zStr)
 
 	if err != nil {
 		return ctx, err
@@ -280,8 +218,8 @@ func assertEqualsVector(ctx context.Context, tupleVariable, xStr, yStr, zStr str
 }
 
 func assertEqualsNormalize(ctx context.Context, tupleVariable1, tupleVariable2 string) (context.Context, error) {
-	tuple1 := ctx.Value(variables{name: tupleVariable1}).(*tuple.Tuple)
-	tuple2 := ctx.Value(variables{name: tupleVariable2}).(*tuple.Tuple)
+	tuple1 := ctx.Value(sharedtest.Variables{Name: tupleVariable1}).(*tuple.Tuple)
+	tuple2 := ctx.Value(sharedtest.Variables{Name: tupleVariable2}).(*tuple.Tuple)
 
 	if !tuple.CompareTuple(tuple1, tuple2.Normalize()) {
 		return ctx, fmt.Errorf("Error %+v != normalize(%+v)!", tuple1, tuple2)
@@ -291,7 +229,7 @@ func assertEqualsNormalize(ctx context.Context, tupleVariable1, tupleVariable2 s
 }
 
 func assertIntersectionT(ctx context.Context, intersectionVariable string, t float64) (context.Context, error) {
-	intersection := ctx.Value(variables{name: intersectionVariable}).(*Intersection)
+	intersection := ctx.Value(sharedtest.Variables{Name: intersectionVariable}).(*Intersection)
 
 	if !shared.CompareFloat(intersection.T, t) {
 		return ctx, fmt.Errorf("Error %+v != %+v!", intersection.T, t)
@@ -301,8 +239,8 @@ func assertIntersectionT(ctx context.Context, intersectionVariable string, t flo
 }
 
 func assertIntersectionObject(ctx context.Context, intersectionVariable, objectVariable string) (context.Context, error) {
-	intersection := ctx.Value(variables{name: intersectionVariable}).(*Intersection)
-	object := ctx.Value(variables{name: objectVariable}).(*Sphere)
+	intersection := ctx.Value(sharedtest.Variables{Name: intersectionVariable}).(*Intersection)
+	object := ctx.Value(sharedtest.Variables{Name: objectVariable}).(*Sphere)
 
 	if intersection.Object != object.Id {
 		return ctx, fmt.Errorf("Error %d != %d!", intersection.Object, object.Id)
@@ -312,7 +250,7 @@ func assertIntersectionObject(ctx context.Context, intersectionVariable, objectV
 }
 
 func assertArrayCount(ctx context.Context, variable string, expected int) (context.Context, error) {
-	intersections := ctx.Value(variables{name: variable})
+	intersections := ctx.Value(sharedtest.Variables{Name: variable})
 
 	value := reflect.ValueOf(intersections)
 
@@ -328,7 +266,7 @@ func assertArrayCount(ctx context.Context, variable string, expected int) (conte
 }
 
 func assertArrayComponent(ctx context.Context, variable string, i int, expected float64) (context.Context, error) {
-	intersections := ctx.Value(variables{name: variable}).([]float64)
+	intersections := ctx.Value(sharedtest.Variables{Name: variable}).([]float64)
 	value := intersections[i]
 
 	if !shared.CompareFloat(value, expected) {
@@ -339,8 +277,8 @@ func assertArrayComponent(ctx context.Context, variable string, i int, expected 
 }
 
 func assertIntersectionEquals(ctx context.Context, i1Variable, i2Variable string) (context.Context, error) {
-	i1 := ctx.Value(variables{name: i1Variable}).(*Intersection)
-	i2 := ctx.Value(variables{name: i2Variable}).(*Intersection)
+	i1 := ctx.Value(sharedtest.Variables{Name: i1Variable}).(*Intersection)
+	i2 := ctx.Value(sharedtest.Variables{Name: i2Variable}).(*Intersection)
 
 	if !shared.CompareFloat(i1.T, i2.T) || i1.Object != i2.Object {
 		return ctx, fmt.Errorf("Error %+v != %+v!", i1, i2)
@@ -350,7 +288,7 @@ func assertIntersectionEquals(ctx context.Context, i1Variable, i2Variable string
 }
 
 func assertIntersectionNothing(ctx context.Context, variable string) (context.Context, error) {
-	i := ctx.Value(variables{name: variable}).(*Intersection)
+	i := ctx.Value(sharedtest.Variables{Name: variable}).(*Intersection)
 
 	if i != nil {
 		return ctx, fmt.Errorf("Error %+v is not nothing!", i)
@@ -360,7 +298,7 @@ func assertIntersectionNothing(ctx context.Context, variable string) (context.Co
 }
 
 func assertRayPosition(ctx context.Context, rayVariable string, t, x, y, z float64) (context.Context, error) {
-	ray := ctx.Value(variables{name: rayVariable}).(*Ray)
+	ray := ctx.Value(sharedtest.Variables{Name: rayVariable}).(*Ray)
 
 	expected := tuple.Point(x, y, z)
 	actual := ray.Position(t)
@@ -373,16 +311,13 @@ func assertRayPosition(ctx context.Context, rayVariable string, t, x, y, z float
 }
 
 func constructors(ctx *godog.ScenarioContext) {
-	regex := fmt.Sprintf(`^(.+) ← point\(%s, %s, %s\)$`, shared.Decimal, shared.Decimal, shared.Decimal)
-	ctx.Step(regex, aPoint)
+	tupletest.AddConstructPoint(ctx)
+	tupletest.AddConstructVector(ctx)
 
-	regex = fmt.Sprintf(`^(.+) ← vector\(%s, %s, %s\)$`, shared.Decimal, shared.Decimal, shared.Decimal)
-	ctx.Step(regex, aVector)
-
-	regex = fmt.Sprintf(`^(.+) ← ray\(%s, %s\)$`, tupleVariableName, tupleVariableName)
+	regex := fmt.Sprintf(`^(.+) ← ray\(%s, %s\)$`, tupleVariableName, tupleVariableName)
 	ctx.Step(regex, aRayFromVariables)
 
-	regex = fmt.Sprintf(`^(.+) ← ray\(point\(%s, %s, %s\), vector\(%s, %s, %s\)\)$`, shared.Decimal, shared.Decimal, shared.Decimal, shared.Decimal, shared.Decimal, shared.Decimal)
+	regex = fmt.Sprintf(`^(.+) ← ray\(point\(%s, %s, %s\), vector\(%s, %s, %s\)\)$`, sharedtest.Decimal, sharedtest.Decimal, sharedtest.Decimal, sharedtest.Decimal, sharedtest.Decimal, sharedtest.Decimal)
 	ctx.Step(regex, aRayFromValues)
 
 	ctx.Step(`^(.+) ← sphere\(\)$`, aSphere)
@@ -390,16 +325,16 @@ func constructors(ctx *godog.ScenarioContext) {
 	regex = fmt.Sprintf(`^(.+) ← intersect\(%s, %s\)$`, tupleVariableName, tupleVariableName)
 	ctx.Step(regex, aIntersect)
 
-	regex = fmt.Sprintf(`^(.+) ← translation\(%s, %s, %s\)$`, shared.Decimal, shared.Decimal, shared.Decimal)
+	regex = fmt.Sprintf(`^(.+) ← translation\(%s, %s, %s\)$`, sharedtest.Decimal, sharedtest.Decimal, sharedtest.Decimal)
 	ctx.Step(regex, aTranslationMatrix)
 
-	regex = fmt.Sprintf(`^(.+) ← scaling\(%s, %s, %s\)$`, shared.Decimal, shared.Decimal, shared.Decimal)
+	regex = fmt.Sprintf(`^(.+) ← scaling\(%s, %s, %s\)$`, sharedtest.Decimal, sharedtest.Decimal, sharedtest.Decimal)
 	ctx.Step(regex, aScalingMatrix)
 
 	regex = fmt.Sprintf(`^(.+) ← transform\(%s, %s\)$`, tupleVariableName, tupleVariableName)
 	ctx.Step(regex, aTransform)
 
-	regex = fmt.Sprintf(`^(.+) ← intersection\(%s, %s\)$`, shared.Decimal, tupleVariableName)
+	regex = fmt.Sprintf(`^(.+) ← intersection\(%s, %s\)$`, sharedtest.Decimal, tupleVariableName)
 	ctx.Step(regex, aIntersection)
 
 	regex = fmt.Sprintf(`^(.+) ← intersections\(%s, %s\)$`, tupleVariableName, tupleVariableName)
@@ -411,7 +346,7 @@ func constructors(ctx *godog.ScenarioContext) {
 	regex = fmt.Sprintf(`^(.+) ← hit\(%s\)$`, tupleVariableName)
 	ctx.Step(regex, aHit)
 
-	regex = fmt.Sprintf(`^(.+) ← normal_at\(%s, point\(%s, %s, %s\)\)$`, tupleVariableName, complexDecimal, complexDecimal, complexDecimal)
+	regex = fmt.Sprintf(`^(.+) ← normal_at\(%s, point\(%s, %s, %s\)\)$`, tupleVariableName, sharedtest.Decimal, sharedtest.Decimal, sharedtest.Decimal)
 	ctx.Step(regex, aNormalAt)
 
 	regex = `^(.+) ← rotation_(.)\(π\/(\d+)\)$`
@@ -424,19 +359,19 @@ func constructors(ctx *godog.ScenarioContext) {
 func assertions(ctx *godog.ScenarioContext) {
 	regex := fmt.Sprintf(`^%s.(origin|direction) = %s$`, tupleVariableName, tupleVariableName)
 	ctx.Step(regex, assertRayComponent)
-	regex = fmt.Sprintf(`^position\((.+), %s\) = point\(%s, %s, %s\)$`, shared.Decimal, shared.Decimal, shared.Decimal, shared.Decimal)
+	regex = fmt.Sprintf(`^position\((.+), %s\) = point\(%s, %s, %s\)$`, sharedtest.Decimal, sharedtest.Decimal, sharedtest.Decimal, sharedtest.Decimal)
 	ctx.Step(regex, assertRayPosition)
-	regex = fmt.Sprintf(`^%s.count = %s$`, tupleVariableName, shared.PosInt)
+	regex = fmt.Sprintf(`^%s.count = %s$`, tupleVariableName, sharedtest.PosInt)
 	ctx.Step(regex, assertArrayCount)
-	regex = fmt.Sprintf(`^%s\[%s\] = %s$`, tupleVariableName, shared.PosInt, shared.Decimal)
+	regex = fmt.Sprintf(`^%s\[%s\] = %s$`, tupleVariableName, sharedtest.PosInt, sharedtest.Decimal)
 	ctx.Step(regex, assertArrayComponent)
-	regex = fmt.Sprintf(`^%s.t = %s$`, tupleVariableName, shared.Decimal)
+	regex = fmt.Sprintf(`^%s.t = %s$`, tupleVariableName, sharedtest.Decimal)
 	ctx.Step(regex, assertIntersectionT)
 	regex = fmt.Sprintf(`^%s.object = %s$`, tupleVariableName, tupleVariableName)
 	ctx.Step(regex, assertIntersectionObject)
-	regex = fmt.Sprintf(`^%s\[%s\].t = %s$`, tupleVariableName, shared.PosInt, shared.Decimal)
+	regex = fmt.Sprintf(`^%s\[%s\].t = %s$`, tupleVariableName, sharedtest.PosInt, sharedtest.Decimal)
 	ctx.Step(regex, assertIntersectionsT)
-	regex = fmt.Sprintf(`^%s\[%s\].object = %s$`, tupleVariableName, shared.PosInt, tupleVariableName)
+	regex = fmt.Sprintf(`^%s\[%s\].object = %s$`, tupleVariableName, sharedtest.PosInt, tupleVariableName)
 	ctx.Step(regex, assertIntersectionsObject)
 	regex = fmt.Sprintf(`^%s = %s$`, tupleVariableName, tupleVariableName)
 	ctx.Step(regex, assertIntersectionEquals)
@@ -444,7 +379,7 @@ func assertions(ctx *godog.ScenarioContext) {
 	ctx.Step(regex, assertIntersectionNothing)
 	regex = fmt.Sprintf(`^%s.transform = %s$`, tupleVariableName, tupleVariableName)
 	ctx.Step(regex, assertSphereTransform)
-	regex = fmt.Sprintf(`^%s = vector\(%s, %s, %s\)$`, tupleVariableName, complexDecimal, complexDecimal, complexDecimal)
+	regex = fmt.Sprintf(`^%s = vector\(%s, %s, %s\)$`, tupleVariableName, sharedtest.Decimal, sharedtest.Decimal, sharedtest.Decimal)
 	ctx.Step(regex, assertEqualsVector)
 	regex = fmt.Sprintf(`^%s = normalize\(%s\)$`, tupleVariableName, tupleVariableName)
 	ctx.Step(regex, assertEqualsNormalize)

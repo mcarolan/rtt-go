@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"rtt/shared"
+	"rtt/sharedtest"
 	"rtt/tuple"
 	"strings"
 	"testing"
@@ -25,10 +25,10 @@ func aColor(ctx context.Context, variable string, x, y, z float64) (context.Cont
 }
 
 func CanvasConstructors(ctx *godog.ScenarioContext) {
-	regex := fmt.Sprintf(`^(.+) ← canvas\(%s, %s\)$`, shared.PosInt, shared.PosInt)
+	regex := fmt.Sprintf(`^(.+) ← canvas\(%s, %s\)$`, sharedtest.PosInt, sharedtest.PosInt)
 	ctx.Step(regex, aCanvas)
 
-	regex = fmt.Sprintf(`^(.+) ← color\(%s, %s, %s\)$`, shared.Decimal, shared.Decimal, shared.Decimal)
+	regex = fmt.Sprintf(`^(.+) ← color\(%s, %s, %s\)$`, sharedtest.Decimal, sharedtest.Decimal, sharedtest.Decimal)
 	ctx.Step(regex, aColor)
 }
 
@@ -127,15 +127,15 @@ func canvasToPPM(ctx context.Context, destination, canvas_var string) context.Co
 }
 
 func CanvasAssertions(ctx *godog.ScenarioContext) {
-	regex := fmt.Sprintf(`^(.+)\.(width|height) = %s$`, shared.PosInt)
+	regex := fmt.Sprintf(`^(.+)\.(width|height) = %s$`, sharedtest.PosInt)
 	ctx.Step(regex, aCanvasComponentEquals)
 	ctx.Step(`^every pixel of (.+) is (.+)$`, everyPixelCheck)
-	regex = fmt.Sprintf(`^pixel_at\((.+), %s, %s\) = (.+)$`, shared.PosInt, shared.PosInt)
+	regex = fmt.Sprintf(`^pixel_at\((.+), %s, %s\) = (.+)$`, sharedtest.PosInt, sharedtest.PosInt)
 	ctx.Step(regex, pixelAt)
 }
 
 func CanvasAssignments(ctx *godog.ScenarioContext) {
-	regex := fmt.Sprintf(`^write_pixel\((.+), %s, %s, (.+)\)$`, shared.PosInt, shared.PosInt)
+	regex := fmt.Sprintf(`^write_pixel\((.+), %s, %s, (.+)\)$`, sharedtest.PosInt, sharedtest.PosInt)
 	ctx.Step(regex, writePixel)
 	ctx.Step(`^(.+) ← canvas_to_ppm\((.+)\)$`, canvasToPPM)
 	ctx.Step(`^lines (\d+)-(\d+) of (.+) are$`, linesAre)
