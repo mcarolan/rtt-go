@@ -9,6 +9,8 @@ import (
 
 var Decimal = `([0-9\.√\-\/]+)`
 var PosInt = `(\d+)`
+var MatrixVariableName = `([A-Z]+)`
+var TupleVariableName = `([a-z]+[0-9]*)`
 
 var rootDivisionPattern = fmt.Sprintf(`√%s\/(\d+)`, Decimal)
 var rootDivision = regexp.MustCompile(rootDivisionPattern)

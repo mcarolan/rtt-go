@@ -23,15 +23,17 @@ func aTuple(ctx context.Context, variable string, x, y, z, w float64) (context.C
 	return context.WithValue(ctx, sharedtest.Variables{Name: variable}, &t), nil
 }
 
-func aColor(ctx context.Context, variable string, x, y, z float64) (context.Context, error) {
-	p := tuple.Color(x, y, z)
-	return context.WithValue(ctx, sharedtest.Variables{Name: variable}, p), nil
-}
-
 func aNormalized(ctx context.Context, variable, in string) (context.Context, error) {
 	t := ctx.Value(sharedtest.Variables{Name: in}).(*tuple.Tuple)
 	t = t.Normalize()
 	return context.WithValue(ctx, sharedtest.Variables{Name: variable}, t), nil
+}
+
+func aReflect(ctx context.Context, variable, inName, normalName string) (context.Context, error) {
+	in := ctx.Value(sharedtest.Variables{Name: inName}).(*tuple.Tuple)
+	normal := ctx.Value(sharedtest.Variables{Name: normalName}).(*tuple.Tuple)
+	result := in.Reflect(normal)
+	return context.WithValue(ctx, sharedtest.Variables{Name: variable}, result), nil
 }
 
 func add(ctx context.Context, assignee, left, right string) (context.Context, error) {
@@ -73,75 +75,6 @@ func scalar_div(ctx context.Context, assignee, in string, scalar float64) (conte
 	return context.WithValue(ctx, sharedtest.Variables{Name: assignee}, t), nil
 }
 
-func compareTuple(ctx context.Context, variable string, x, y, z, w float64) error {
-	actual, ok := ctx.Value(sharedtest.Variables{Name: variable}).(*tuple.Tuple)
-
-	if !ok {
-		return fmt.Errorf("tuple %s is not set", variable)
-	}
-
-	t := tuple.Tuple{
-		X: x,
-		Y: y,
-		Z: z,
-		W: w,
-	}
-
-	if *actual != t {
-		return fmt.Errorf("%+v was not %+v", actual, t)
-	}
-
-	return nil
-}
-
-func compareVector(ctx context.Context, variable string, x, y, z float64) error {
-	actual, ok := ctx.Value(sharedtest.Variables{Name: variable}).(*tuple.Tuple)
-
-	if !ok {
-		return fmt.Errorf("tuple %s is not set", variable)
-	}
-
-	t := tuple.Vector(x, y, z)
-
-	if *actual != *t {
-		return fmt.Errorf("%+v was not %+v", actual, t)
-	}
-
-	return nil
-}
-
-func comparePoint(ctx context.Context, variable string, x, y, z float64) error {
-	actual, ok := ctx.Value(sharedtest.Variables{Name: variable}).(*tuple.Tuple)
-
-	if !ok {
-		return fmt.Errorf("tuple %s is not set", variable)
-	}
-
-	t := tuple.Point(x, y, z)
-
-	if *actual != *t {
-		return fmt.Errorf("%+v was not %+v", actual, t)
-	}
-
-	return nil
-}
-
-func compareColor(ctx context.Context, variable string, x, y, z float64) error {
-	actual, ok := ctx.Value(sharedtest.Variables{Name: variable}).(*tuple.Tuple)
-
-	if !ok {
-		return fmt.Errorf("tuple %s is not set", variable)
-	}
-
-	t := tuple.Color(x, y, z)
-
-	if !tuple.CompareTuple(actual, t) {
-		return fmt.Errorf("%+v was not %+v", actual, t)
-	}
-
-	return nil
-}
-
 func compareMag(ctx context.Context, variable string, sqrt string, expected float64) error {
 	actual, ok := ctx.Value(sharedtest.Variables{variable}).(*tuple.Tuple)
 
@@ -178,17 +111,6 @@ func compareCross(ctx context.Context, left, right, expected string) error {
 
 	if *l.Cross(r) != *e {
 		return fmt.Errorf("cross(%+v, %+v) was %+v, not %+v", l, r, l.Cross(r), e)
-	}
-
-	return nil
-}
-
-func compareNormalize(ctx context.Context, variable string, expected string) error {
-	in := ctx.Value(sharedtest.Variables{variable}).(*tuple.Tuple)
-	expectedTuple := ctx.Value(sharedtest.Variables{Name: expected}).(*tuple.Tuple)
-
-	if !tuple.CompareTuple(in.Normalize(), expectedTuple) {
-		return fmt.Errorf("%+v normalized was %+v, not %+v", in, in.Normalize(), expectedTuple)
 	}
 
 	return nil
@@ -270,11 +192,12 @@ func TupleConstructors(ctx *godog.ScenarioContext) {
 
 	AddConstructPoint(ctx)
 	AddConstructVector(ctx)
-
-	regex = fmt.Sprintf(`^(.+) ← color\(%s, %s, %s\)$`, sharedtest.Decimal, sharedtest.Decimal, sharedtest.Decimal)
-	ctx.Step(regex, aColor)
+	AddConstructColor(ctx)
 
 	ctx.Step(`^(.+) ← normalize\((.+)\)$`, aNormalized)
+
+	regex = fmt.Sprintf(`^(.+) ← reflect\(%s, %s\)$`, sharedtest.TupleVariableName, sharedtest.TupleVariableName)
+	ctx.Step(regex, aReflect)
 }
 
 func TupleAssertions(ctx *godog.ScenarioContext) {
@@ -284,22 +207,14 @@ func TupleAssertions(ctx *godog.ScenarioContext) {
 	ctx.Step(`^(.) is (not )?a point$`, aPointCheck)
 	ctx.Step(`^(.) is (not )?a vector$`, aVectorCheck)
 
-	regex = fmt.Sprintf(`^(.+) = tuple\(%s, %s, %s, %s\)$`, sharedtest.Decimal, sharedtest.Decimal, sharedtest.Decimal, sharedtest.Decimal)
-	ctx.Step(regex, compareTuple)
-
-	regex = fmt.Sprintf(`^(.+) = vector\(%s, %s, %s\)$`, sharedtest.Decimal, sharedtest.Decimal, sharedtest.Decimal)
-	ctx.Step(regex, compareVector)
-
-	regex = fmt.Sprintf(`^(.+) = point\(%s, %s, %s\)$`, sharedtest.Decimal, sharedtest.Decimal, sharedtest.Decimal)
-	ctx.Step(regex, comparePoint)
-
-	regex = fmt.Sprintf(`^(.+) = color\(%s, %s, %s\)$`, sharedtest.Decimal, sharedtest.Decimal, sharedtest.Decimal)
-	ctx.Step(regex, compareColor)
+	AddCompareColor(ctx)
+	AddComparePoint(ctx)
+	AddCompareTuple(ctx)
+	AddCompareVector(ctx)
+	AddCompareNormalize(ctx)
 
 	regex = fmt.Sprintf(`^magnitude\((.+)\) = (√)?%s$`, sharedtest.Decimal)
 	ctx.Step(regex, compareMag)
-
-	ctx.Step(`^normalize\((.+)\) = (.+)$`, compareNormalize)
 
 	regex = fmt.Sprintf(`^dot\((.+), (.+)\) = %s$`, sharedtest.Decimal)
 	ctx.Step(regex, compareDot)

@@ -138,6 +138,12 @@ func (a *Tuple) Hadamard(b *Tuple) *Tuple {
 	return Color(red, green, blue)
 }
 
+func (a *Tuple) Reflect(normal *Tuple) *Tuple {
+	doubleNormal := normal.ScalarMultiply(2)
+	dot := a.Dot(normal)
+	return a.Subtract(doubleNormal.ScalarMultiply(dot))
+}
+
 func CompareTuple(a, b *Tuple) bool {
 	return shared.CompareFloat(a.X, b.X) && shared.CompareFloat(a.Y, b.Y) && shared.CompareFloat(a.Z, b.Z) && shared.CompareFloat(a.W, b.W)
 }

@@ -1,13 +1,5 @@
 package main
 
-import (
-	"fmt"
-	"os"
-	"rtt/canvas"
-	"rtt/ray"
-	"rtt/tuple"
-)
-
 // clock
 // func main() {
 // 	c := canvas.NewCanvas(800, 600)
@@ -34,39 +26,39 @@ import (
 // 	}
 // }
 
-func main() {
-	shape := ray.NewSphere()
-	rayOrigin := tuple.Point(0, 0, -5)
-	wallZ := 10.0
-	wallSize := 7.0
-	canvasPixels := 100.0
-	pixelSize := wallSize / canvasPixels
-	half := wallSize / 2.0
+// func main() {
+// 	shape := ray.NewSphere()
+// 	rayOrigin := tuple.Point(0, 0, -5)
+// 	wallZ := 10.0
+// 	wallSize := 7.0
+// 	canvasPixels := 100.0
+// 	pixelSize := wallSize / canvasPixels
+// 	half := wallSize / 2.0
 
-	c := canvas.NewCanvas(int32(canvasPixels), int32(canvasPixels))
-	for y := 0; y < int(c.Height); y++ {
-		worldY := half - pixelSize*float64(y)
-		for x := 0; x < int(c.Width); x++ {
-			worldX := -half + pixelSize*float64(x)
-			position := tuple.Point(worldX, worldY, wallZ)
+// 	c := canvas.NewCanvas(int32(canvasPixels), int32(canvasPixels))
+// 	for y := 0; y < int(c.Height); y++ {
+// 		worldY := half - pixelSize*float64(y)
+// 		for x := 0; x < int(c.Width); x++ {
+// 			worldX := -half + pixelSize*float64(x)
+// 			position := tuple.Point(worldX, worldY, wallZ)
 
-			r := ray.NewRay(*rayOrigin, *position.Subtract(rayOrigin).Normalize())
-			intersections, err := shape.Intersect(r)
+// 			r := ray.NewRay(*rayOrigin, *position.Subtract(rayOrigin).Normalize())
+// 			intersections, err := shape.Intersect(r)
 
-			if err != nil {
-				fmt.Printf("%s", err)
-				os.Exit(1)
-			}
+// 			if err != nil {
+// 				fmt.Printf("%s", err)
+// 				os.Exit(1)
+// 			}
 
-			if ray.Hit(intersections) != nil {
-				c.WritePixel(int32(x), int32(y), tuple.Red)
-			}
-		}
-	}
-	ppm := c.ToPPM()
+// 			if ray.Hit(intersections) != nil {
+// 				c.WritePixel(int32(x), int32(y), tuple.Red)
+// 			}
+// 		}
+// 	}
+// 	ppm := c.ToPPM()
 
-	if err := os.WriteFile("sphere.ppm", []byte(*ppm), 0666); err != nil {
-		fmt.Printf("Error writing result: %s", err)
-		os.Exit(1)
-	}
-}
+// 	if err := os.WriteFile("sphere.ppm", []byte(*ppm), 0666); err != nil {
+// 		fmt.Printf("Error writing result: %s", err)
+// 		os.Exit(1)
+// 	}
+// }
